@@ -1,0 +1,42 @@
+# Root .gitignore for plant-disease-detection
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints
+
+# Node
+node_modules/
+/dist
+
+# Dataset and images - exclude raw datasets and images
+backend/dataset/
+backend/dataset/
+backend/dataset/raw/
+**/dataset/
+*.jpg
+*.jpeg
+*.png
+
+# Saved models & artifacts
+backend/saved_models/
+*.h5
+*.keras
+*.ckpt
+*.pt
+
+# Results / logs / figures
+backend/results/
+*.log
+
+# Editor files
+.vscode/
+.idea/

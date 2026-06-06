@@ -1,0 +1,38 @@
+
+.env
+# Python
+__pycache__/
+*.pyc
+.venv/
+.venv/**
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb_checkpoints
+
+# Node
+node_modules/
+dist/
+.DS_Store
+
+# Dataset and images - DO NOT push raw images
+backend/dataset/
+backend/dataset/raw/
+backend/dataset/**/raw/
+**/dataset/
+**/dataset/raw/
+*.jpg
+*.jpeg
+*.png
+
+# Saved models & artifacts (optional: use git-lfs instead)
+backend/saved_models/
+*.h5
+*.keras
+*.ckpt
+*.pt
+
+# Results / logs / figures (optional)
+backend/results/
+backend/results/figures/
+*.log

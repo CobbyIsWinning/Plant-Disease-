@@ -1,0 +1,13 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+venv/
+env/
+*.h5
+*.keras
+*.ckpt
+*.log
+.ipynb_checkpoints
+backend/notebooks
