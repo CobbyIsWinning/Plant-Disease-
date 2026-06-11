@@ -8,8 +8,10 @@ from PIL import Image
 import tensorflow as tf
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from tensorflow.keras.models import load_model
+from tensorflow.keras.models import load_model, Model
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+import matplotlib.cm as cm
+import base64
 
 # Configuration
 IMG_SIZE = 224
@@ -86,11 +88,59 @@ def _preprocess_image(data: bytes) -> np.ndarray:
     return arr
 
 
-@app.post("/predict")
-async def predict(file: UploadFile = File(...), top_k: int = 3):
-    """Predict the plant disease from an uploaded image.
+def make_gradcam_heatmap(img_array, model, last_conv_layer_name, pred_index=None):
+    """Generates a Grad-CAM heatmap."""
+    grad_model = Model(
+        model.inputs, [model.get_layer(last_conv_layer_name).output, model.output]
+    )
 
-    Returns the top-1 predicted class and confidence and top-k list.
+    with tf.GradientTape() as tape:
+        last_conv_layer_output, preds = grad_model(img_array)
+        if pred_index is None:
+            pred_index = tf.argmax(preds[0])
+        class_channel = preds[:, pred_index]
+
+    grads = tape.gradient(class_channel, last_conv_layer_output)
+    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+
+    last_conv_layer_output = last_conv_layer_output[0]
+    heatmap = last_conv_layer_output @ pooled_grads[..., tf.newaxis]
+    heatmap = tf.squeeze(heatmap)
+
+    heatmap = tf.maximum(heatmap, 0) / (tf.math.reduce_max(heatmap) + 1e-10)
+    return heatmap.numpy()
+
+
+def overlay_heatmap(img_data, heatmap, alpha=0.4):
+    """Overlays the heatmap on the original image and returns as base64."""
+    img = Image.open(io.BytesIO(img_data)).convert("RGB")
+    original_size = img.size
+    img_array = np.array(img)
+
+    # Rescale heatmap to 0-255
+    heatmap_img = np.uint8(255 * heatmap)
+    jet = cm.get_cmap("jet")
+    jet_colors = jet(np.arange(256))[:, :3]
+    jet_heatmap = jet_colors[heatmap_img]
+
+    # Resize heatmap to match image size
+    jet_heatmap = Image.fromarray(np.uint8(jet_heatmap * 255))
+    jet_heatmap = jet_heatmap.resize(original_size)
+    jet_heatmap = np.array(jet_heatmap)
+
+    # Superimpose
+    superimposed_img = jet_heatmap * alpha + img_array
+    superimposed_img = Image.fromarray(np.uint8(superimposed_img))
+
+    buffered = io.BytesIO()
+    superimposed_img.save(buffered, format="JPEG")
+    return base64.b64encode(buffered.getvalue()).decode()
+
+
+@app.post("/predict")
+async def predict(file: UploadFile = File(...), top_k: int = 3, grad_cam: bool = False):
+    """Predict the plant disease from an uploaded image.
+    If grad_cam is True, returns a base64 encoded heatmap overlay.
     """
     if _model is None:
         raise HTTPException(status_code=500, detail="Model not loaded on server. Check backend/saved_models/.")
@@ -108,17 +158,17 @@ async def predict(file: UploadFile = File(...), top_k: int = 3):
     preds = _model.predict(inp)
     if preds.ndim == 2:
         preds = preds[0]
-    # If model already returned probabilities (softmax), use them directly
+    
+    # Softmax probabilities
     probs = preds / (preds.sum() + 1e-12)
 
     # top-k
     top_k = min(int(top_k), len(probs))
     top_idx = probs.argsort()[-top_k:][::-1]
 
-    # prepare label mapping (index->label)
+    # prepare label mapping
     idx_to_label = None
     if _class_indices:
-        # class_indices is label->index; invert it
         idx_to_label = {v: k for k, v in _class_indices.items()}
 
     results = []
@@ -135,6 +185,24 @@ async def predict(file: UploadFile = File(...), top_k: int = 3):
         "top_k": results,
         "class_indices_loaded": bool(_class_indices),
     }
+
+    if grad_cam:
+        try:
+            # Find the last convolutional layer. For MobileNetV2, it's usually 'Conv_1' or 'out_relu'
+            # Note: We use the most common layer names or dynamically search for a Conv2D layer.
+            last_conv_layer = None
+            for layer in reversed(_model.layers):
+                if isinstance(layer, tf.keras.layers.Conv2D):
+                    last_conv_layer = layer.name
+                    break
+            
+            if last_conv_layer:
+                heatmap = make_gradcam_heatmap(inp, _model, last_conv_layer)
+                response["heatmap"] = overlay_heatmap(content, heatmap)
+        except Exception as e:
+            print(f"Grad-CAM error: {e}")
+            response["heatmap_error"] = str(e)
+
     return response
 
 

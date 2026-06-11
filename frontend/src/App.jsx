@@ -29,7 +29,7 @@ export default function App() {
     form.append('top_k', '5')
 
     try {
-      const res = await fetch(BACKEND_DEFAULT + '/predict', { method: 'POST', body: form })
+      const res = await fetch(BACKEND_DEFAULT + '/predict?grad_cam=true', { method: 'POST', body: form })
       if (!res.ok) {
         const txt = await res.text()
         throw new Error(txt || `HTTP ${res.status}`)
@@ -53,13 +53,23 @@ export default function App() {
         <button onClick={onPredict} disabled={loading}>Predict</button>
       </div>
 
-      {preview && (
-        <div className="preview">
-          <img src={preview} alt="preview" />
-        </div>
-      )}
+      <div className="images-container">
+        {preview && (
+          <div className="preview">
+            <h3>Original Image</h3>
+            <img src={preview} alt="preview" />
+          </div>
+        )}
 
-      {loading && <p>Thinking...</p>}
+        {result && result.heatmap && (
+          <div className="heatmap">
+            <h3>Explainability (Heatmap)</h3>
+            <img src={`data:image/jpeg;base64,${result.heatmap}`} alt="heatmap" />
+          </div>
+        )}
+      </div>
+
+      {loading && <p className="status">Processing request...</p>}
 
       {result && (
         <div className="result">
