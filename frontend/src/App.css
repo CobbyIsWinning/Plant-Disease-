@@ -360,6 +360,61 @@ input {
   color: var(--ink);
 }
 
+.diagnosis-panel {
+  display: grid;
+  gap: 22px;
+  padding: 24px;
+  border: 1px solid #d8e6d9;
+  border-radius: 8px;
+  background: #f8fbf7;
+}
+
+.diagnosis-summary h3 {
+  margin: 0 0 10px;
+  font-size: clamp(22px, 2.6vw, 34px);
+  line-height: 1.1;
+}
+
+.diagnosis-summary p,
+.diagnosis-note {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.diagnosis-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.diagnosis-grid > div {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.diagnosis-grid h4 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.diagnosis-grid ul {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.diagnosis-note {
+  padding-top: 4px;
+  font-size: 13px;
+}
+
 .error {
   grid-column: 1 / -1;
   min-height: 44px;
@@ -443,6 +498,7 @@ input {
   .upload-panel,
   .images-container,
   .result,
+  .diagnosis-grid,
   .footer-grid {
     grid-template-columns: 1fr;
   }
