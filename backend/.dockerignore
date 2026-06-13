@@ -5,9 +5,10 @@ __pycache__
 *.pyd
 venv/
 env/
-*.h5
-*.keras
 *.ckpt
 *.log
 .ipynb_checkpoints
 backend/notebooks
+dataset/
+notebooks/
+results/

@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: plant-disease-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    plan: free
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"

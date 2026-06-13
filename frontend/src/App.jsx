@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import landingVideo from './landingvideo.mp4'
 import { getDiagnosisInfo, getDisplayPrediction } from './diagnosisInfo'
 
-const BACKEND_DEFAULT = 'http://localhost:8000'
+const BACKEND_DEFAULT = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export default function App() {
   const [file, setFile] = useState(null)
@@ -199,7 +199,7 @@ export default function App() {
       <footer className="site-footer">
         <div className="section-inner footer-grid">
           <div>
-            <a className="footer-brand" href="#top">LeafGuard AI</a>
+            <a className="footer-brand" href="#top">LeafGuard</a>
             <p>
               A plant disease detection interface powered by a saved Keras model and
               Grad-CAM visual explanations.

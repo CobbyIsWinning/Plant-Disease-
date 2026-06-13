@@ -3,6 +3,5 @@ uvicorn[standard]
 tensorflow
 Pillow
 numpy
-seaborn
-scikit-learn
+matplotlib
 python-multipart

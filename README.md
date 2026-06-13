@@ -83,13 +83,24 @@ Open the Vite URL, usually:
 http://localhost:5173
 ```
 
-The frontend currently posts to:
+The frontend uses `VITE_API_URL` in production and falls back locally to:
 
 ```text
 http://localhost:8000/predict
 ```
 
-You can change this in `frontend/src/App.jsx` by editing `BACKEND_DEFAULT`.
+On Vercel, set:
+
+```text
+VITE_API_URL=https://your-render-backend.onrender.com
+```
+
+On Render, set:
+
+```text
+CORS_ORIGINS=https://your-vercel-app.vercel.app
+PYTHONUNBUFFERED=1
+```
 
 ## API Summary
 

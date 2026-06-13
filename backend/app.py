@@ -32,11 +32,17 @@ PREFERRED_MODELS = [
 CLASS_INDICES_PATH = os.path.join(MODEL_DIR, "class_indices_mobilenetv2.json")
 DATASET_DIR = os.path.join(os.path.dirname(__file__), "dataset", "raw")
 IGNORED_PREDICTION_CLASSES = {"PlantVillage"}
+DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
+
+
+def _get_cors_origins():
+    origins = os.getenv("CORS_ORIGINS", DEFAULT_CORS_ORIGINS)
+    return [origin.strip().rstrip("/") for origin in origins.split(",") if origin.strip()]
 
 app = FastAPI(title="Plant Disease Prediction API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

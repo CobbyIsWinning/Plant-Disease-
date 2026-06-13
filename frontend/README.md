@@ -29,16 +29,18 @@ The UI is organized as:
 
 ## Backend Connection
 
-The frontend posts images to the backend endpoint defined in `src/App.jsx`:
+The frontend posts images to the backend endpoint defined by `VITE_API_URL`.
+
+For local development, `src/App.jsx` falls back to:
 
 ```js
-const BACKEND_DEFAULT = 'http://localhost:8000'
+http://localhost:8000
 ```
 
 Prediction requests are sent to:
 
 ```text
-POST http://localhost:8000/predict?grad_cam=true
+POST {VITE_API_URL}/predict?grad_cam=true
 ```
 
 The request body is `FormData` containing:
@@ -97,6 +99,16 @@ Make sure the backend is also running at:
 http://localhost:8000
 ```
 
+## Environment Variables
+
+For Vercel, set:
+
+```text
+VITE_API_URL=https://your-render-backend.onrender.com
+```
+
+Do not include a trailing slash.
+
 ## Building for Production
 
 ```bash
@@ -119,6 +131,6 @@ Common edits:
 
 - Change hero copy in `App.jsx`
 - Change colors and layout in `App.css`
-- Update backend URL with `BACKEND_DEFAULT`
+- Update backend URL with `VITE_API_URL`
 - Add or improve diagnosis content in `src/diagnosisInfo.js`
 - Add more ignored non-disease labels to `IGNORED_PREDICTION_CLASSES` in `src/diagnosisInfo.js`

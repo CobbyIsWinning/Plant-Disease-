@@ -110,6 +110,34 @@ Then test:
 curl "http://127.0.0.1:8000/health"
 ```
 
+## Environment Variables
+
+### Local defaults
+
+If no CORS variable is set, the backend allows local Vite origins:
+
+```text
+http://localhost:5173
+http://127.0.0.1:5173
+```
+
+### Render production
+
+Set this in Render so only your Vercel frontend can call the API:
+
+```text
+CORS_ORIGINS=https://your-vercel-app.vercel.app
+PYTHONUNBUFFERED=1
+```
+
+If you need multiple frontend origins, separate them with commas:
+
+```text
+CORS_ORIGINS=https://your-vercel-app.vercel.app,http://localhost:5173
+```
+
+Do not include trailing slashes.
+
 ## Grad-CAM
 
 Grad-CAM is generated when `grad_cam=true`.
@@ -156,8 +184,10 @@ Check the backend terminal logs for the exact exception.
 
 For hosting, deploy the backend as a Docker container with the saved model included or mounted. The prediction service needs enough memory for TensorFlow and the model file.
 
-If deploying the current `Dockerfile`, verify the import path and app command for the target platform. Local development currently runs from the repository root with:
+For Render Docker deployment, use:
 
-```bash
-uvicorn backend.app:app
+```text
+Root Directory: backend
+Dockerfile Path: ./Dockerfile
+Start Command: leave empty
 ```

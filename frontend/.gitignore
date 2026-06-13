@@ -24,6 +24,8 @@ backend/dataset/**/raw/
 *.jpg
 *.jpeg
 *.png
+!public/
+!public/flower-pot.png
 
 # Saved models & artifacts (optional: use git-lfs instead)
 backend/saved_models/

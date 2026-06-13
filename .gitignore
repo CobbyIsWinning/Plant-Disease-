@@ -27,9 +27,11 @@ backend/dataset/raw/
 *.png
 
 # Saved models & artifacts
-backend/saved_models/
 *.h5
 *.keras
+!backend/saved_models/
+!backend/saved_models/*.keras
+!backend/saved_models/*.json
 *.ckpt
 *.pt
 
