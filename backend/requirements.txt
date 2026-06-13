@@ -5,3 +5,4 @@ Pillow
 numpy
 seaborn
 scikit-learn
+python-multipart
