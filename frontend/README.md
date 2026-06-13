@@ -7,8 +7,9 @@ The frontend is a React/Vite landing page for the plant disease detection model.
 ```text
 frontend/
 ├── src/
-│   ├── App.jsx             # Main React app and diagnosis content map
+│   ├── App.jsx             # Main React app and upload/result UI
 │   ├── App.css             # Landing page and predictor styling
+│   ├── diagnosisInfo.js    # Diagnosis notes, ignored labels, display helpers
 │   ├── main.jsx            # React entry point
 │   └── landingvideo.mp4    # Hero background video
 ├── package.json            # Scripts and dependencies
@@ -43,11 +44,11 @@ POST http://localhost:8000/predict?grad_cam=true
 The request body is `FormData` containing:
 
 - `file`: selected image
-- `top_k`: currently set to `5`
+- `top_k`: currently set to `3`
 
 ## Diagnosis Notes
 
-The detailed diagnosis text is stored in `DIAGNOSIS_INFO` inside `src/App.jsx`.
+The detailed diagnosis text is stored in `DIAGNOSIS_INFO` inside `src/diagnosisInfo.js`.
 
 Each class can define:
 
@@ -57,7 +58,7 @@ Each class can define:
 - `causes`
 - `nextSteps`
 
-The model returns only labels and confidence scores. The frontend maps those labels to readable educational guidance.
+The backend returns labels, raw model scores, and display-normalized confidence ratings. The frontend maps the selected label to readable educational guidance.
 
 ## Ignored Prediction Classes
 
@@ -67,7 +68,7 @@ The frontend currently ignores:
 PlantVillage
 ```
 
-This is a temporary UI fix because `PlantVillage` appears as a folder in the dataset and can be returned as a model class. The preferred long-term fix is to clean the dataset and retrain with only real crop/disease labels.
+This is a defensive UI fallback. The backend now also filters `PlantVillage` so `predicted_class` and `confidence` refer to the best real crop/disease class. The preferred long-term fix is still to clean the dataset and retrain with only real crop/disease labels.
 
 ## Running Locally
 
@@ -119,5 +120,5 @@ Common edits:
 - Change hero copy in `App.jsx`
 - Change colors and layout in `App.css`
 - Update backend URL with `BACKEND_DEFAULT`
-- Add or improve diagnosis content in `DIAGNOSIS_INFO`
-- Add more ignored non-disease labels to `IGNORED_PREDICTION_CLASSES`
+- Add or improve diagnosis content in `src/diagnosisInfo.js`
+- Add more ignored non-disease labels to `IGNORED_PREDICTION_CLASSES` in `src/diagnosisInfo.js`

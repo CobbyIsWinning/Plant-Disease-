@@ -33,6 +33,7 @@ Plant Disease Detection is a full-stack machine learning project for classifying
 │   ├── src/
 │   │   ├── App.jsx               # Landing page, upload UI, diagnosis rendering
 │   │   ├── App.css               # Frontend styling
+│   │   ├── diagnosisInfo.js      # Diagnosis notes and display helpers
 │   │   └── landingvideo.mp4      # Hero background video
 │   ├── package.json              # Frontend scripts and dependencies
 │   └── vite.config.js
@@ -49,11 +50,11 @@ Plant Disease Detection is a full-stack machine learning project for classifying
 5. The model predicts the class probabilities.
 6. The backend returns:
    - predicted class
-   - confidence score
-   - top predictions
+   - displayed confidence rating normalized across the returned valid top predictions
+   - top predictions with both normalized display confidence and raw model confidence
    - optional Grad-CAM heatmap as base64 JPEG
-7. The frontend filters out the temporary `PlantVillage` dataset-folder label and displays the best real crop/disease prediction.
-8. The frontend maps the predicted class to diagnosis notes stored locally in `App.jsx`.
+7. The backend filters out the temporary `PlantVillage` dataset-folder label and returns the best real crop/disease prediction.
+8. The frontend maps the predicted class to diagnosis notes stored locally in `frontend/src/diagnosisInfo.js`.
 
 ## Local Setup
 
@@ -102,7 +103,7 @@ Accepts a multipart image upload.
 
 Query parameters:
 
-- `top_k`: number of predictions to return, default `3`
+- `top_k`: number of displayed predictions to return, default `3`
 - `grad_cam`: whether to include a heatmap, default `false`
 
 Example:
@@ -116,11 +117,13 @@ Example response shape:
 ```json
 {
   "predicted_class": "Tomato_Early_blight",
-  "confidence": 0.82,
+  "confidence": 0.91,
+  "raw_confidence": 0.82,
   "top_k": [
-    { "class": "Tomato_Early_blight", "confidence": 0.82 },
-    { "class": "Tomato_Late_blight", "confidence": 0.09 }
+    { "class": "Tomato_Early_blight", "confidence": 0.91, "raw_confidence": 0.82 },
+    { "class": "Tomato_Late_blight", "confidence": 0.09, "raw_confidence": 0.08 }
   ],
+  "confidence_basis": "normalized_top_k_valid_classes",
   "class_indices_loaded": true,
   "heatmap": "base64-jpeg-data"
 }
@@ -147,7 +150,7 @@ For this baseline model, images are resized to `224x224` and normalized with `ar
 
 ## Diagnosis Notes
 
-The model itself only predicts labels and probabilities. The detailed diagnosis text is provided by the frontend using a class-to-content map in `frontend/src/App.jsx`.
+The model itself only predicts labels and probabilities. The detailed diagnosis text is provided by the frontend using a class-to-content map in `frontend/src/diagnosisInfo.js`.
 
 Each diagnosis entry can include:
 
@@ -161,7 +164,7 @@ This keeps the explanation predictable and avoids generating unsupported advice.
 
 ## Known Limitations
 
-- `PlantVillage` currently exists as a folder inside `backend/dataset/raw`, so the backend may treat it as a class. The frontend filters it out for display, but the dataset should be cleaned so `PlantVillage` is not a class label.
+- `PlantVillage` currently exists as a folder inside `backend/dataset/raw`, so the model may score it as a class. The backend filters it out of API responses, but the dataset should be cleaned so `PlantVillage` is not a class label.
 - The baseline model evaluation in `backend/results/classification_report.txt` shows low overall accuracy. Treat predictions as a demo result, not a production diagnosis.
 - The app uses image-only classification. It does not consider weather, location, plant age, crop management, or field spread.
 - The Grad-CAM heatmap explains model attention, not guaranteed biological evidence.

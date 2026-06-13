@@ -31,6 +31,7 @@ PREFERRED_MODELS = [
 ]
 CLASS_INDICES_PATH = os.path.join(MODEL_DIR, "class_indices_mobilenetv2.json")
 DATASET_DIR = os.path.join(os.path.dirname(__file__), "dataset", "raw")
+IGNORED_PREDICTION_CLASSES = {"PlantVillage"}
 
 app = FastAPI(title="Plant Disease Prediction API")
 app.add_middleware(
@@ -230,27 +231,53 @@ async def predict(file: UploadFile = File(...), top_k: int = 3, grad_cam: bool =
     # Softmax probabilities
     probs = preds / (preds.sum() + 1e-12)
 
-    # top-k
-    top_k = min(int(top_k), len(probs))
-    top_idx = probs.argsort()[-top_k:][::-1]
-
     # prepare label mapping
     idx_to_label = None
     if _class_indices:
         idx_to_label = {v: k for k, v in _class_indices.items()}
 
+    # top-k, excluding dataset container labels that are not real diagnoses
+    top_k = max(1, min(int(top_k), len(probs)))
+    sorted_idx = probs.argsort()[::-1]
     results = []
-    for idx in top_idx:
+    for idx in sorted_idx:
         label = idx_to_label.get(int(idx), str(int(idx))) if idx_to_label else str(int(idx))
+        if label in IGNORED_PREDICTION_CLASSES:
+            continue
         confidence = float(probs[int(idx)])
-        results.append({"class": label, "confidence": confidence})
+        results.append({"class": label, "confidence": confidence, "index": int(idx)})
+        if len(results) >= top_k:
+            break
 
-    top1 = results[0]
+    if not results:
+        raise HTTPException(status_code=500, detail="No valid diagnosis classes found in model output.")
+
+    display_total = sum(item["confidence"] for item in results) or 1e-12
+    normalized_results = [
+        {
+            "class": item["class"],
+            "confidence": item["confidence"] / display_total,
+            "raw_confidence": item["confidence"],
+            "index": item["index"],
+        }
+        for item in results
+    ]
+
+    top1 = normalized_results[0]
 
     response = {
         "predicted_class": top1["class"],
         "confidence": top1["confidence"],
-        "top_k": results,
+        "raw_confidence": top1["raw_confidence"],
+        "top_k": [
+            {
+                "class": item["class"],
+                "confidence": item["confidence"],
+                "raw_confidence": item["raw_confidence"],
+            }
+            for item in normalized_results
+        ],
+        "confidence_basis": "normalized_top_k_valid_classes",
         "class_indices_loaded": bool(_class_indices),
     }
 
@@ -265,7 +292,7 @@ async def predict(file: UploadFile = File(...), top_k: int = 3, grad_cam: bool =
                     break
             
             if last_conv_layer_name:
-                heatmap = make_gradcam_heatmap(inp, _model, last_conv_layer_name)
+                heatmap = make_gradcam_heatmap(inp, _model, last_conv_layer_name, pred_index=top1["index"])
                 response["heatmap"] = overlay_heatmap(content, heatmap)
         except Exception as e:
             print(f"Grad-CAM error: {e}")

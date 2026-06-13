@@ -71,7 +71,7 @@ Accepts a multipart uploaded image.
 
 Query parameters:
 
-- `top_k`: number of prediction classes to return, default `3`
+- `top_k`: number of displayed prediction classes to return, default `3`
 - `grad_cam`: include a Grad-CAM heatmap when `true`, default `false`
 
 Example:
@@ -83,8 +83,10 @@ curl -F "file=@/path/to/leaf.jpg" "http://127.0.0.1:8000/predict?top_k=5&grad_ca
 Response fields:
 
 - `predicted_class`: top model class
-- `confidence`: probability-like confidence value
-- `top_k`: ranked class list
+- `confidence`: displayed rating normalized across the returned valid top-k classes
+- `raw_confidence`: original model score before top-k display normalization
+- `top_k`: ranked class list with normalized and raw confidence values
+- `confidence_basis`: describes how displayed confidence values are calculated
 - `class_indices_loaded`: whether label mapping was available
 - `heatmap`: optional base64 JPEG heatmap overlay
 - `heatmap_error`: returned only when Grad-CAM fails but prediction succeeds
@@ -134,7 +136,7 @@ backend/saved_models/
 
 ### Wrong or strange class labels
 
-If `class_indices_mobilenetv2.json` is missing, labels are inferred from dataset folders. This currently includes `PlantVillage` if that folder exists in `backend/dataset/raw`, which is why the frontend filters it out temporarily.
+If `class_indices_mobilenetv2.json` is missing, labels are inferred from dataset folders. This currently includes `PlantVillage` if that folder exists in `backend/dataset/raw`. The backend filters this label out of API responses so the returned confidence belongs to the best real diagnosis class.
 
 Best fix: clean the dataset folder structure and save an explicit class-index JSON file during training.
 
