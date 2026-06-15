@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from tensorflow.keras.models import load_model, Model
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 import matplotlib.cm as cm
+import matplotlib
 import base64
 
 # Configuration
@@ -190,7 +191,7 @@ def overlay_heatmap(img_data, heatmap, alpha=0.4, colormap_name="jet"):
     heatmap_resized = np.array(heatmap_img)
 
     # Use a colormap to colorize the heatmap
-    colormap = cm.get_cmap(colormap_name)
+    colormap = matplotlib.colormaps.get_cmap(colormap_name) if hasattr(matplotlib, "colormaps") else cm.get_cmap(colormap_name)
     
     # Use the colormap to get RGB values
     colored_heatmap = colormap(heatmap_resized)[:, :, :3]
