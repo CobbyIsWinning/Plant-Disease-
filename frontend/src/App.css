@@ -307,6 +307,20 @@ input {
   color: var(--muted);
 }
 
+.heatmap-error {
+  gap: 8px;
+  align-content: center;
+  place-items: center;
+  color: var(--danger);
+}
+
+.heatmap-error span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .status {
   margin: 0;
   color: var(--leaf-dark);

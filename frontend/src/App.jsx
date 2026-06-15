@@ -124,6 +124,11 @@ export default function App() {
                 <h3>Explainability Heatmap</h3>
                 {result && result.heatmap ? (
                   <img src={`data:image/jpeg;base64,${result.heatmap}`} alt="Grad-CAM heatmap" />
+                ) : result && result.heatmap_error ? (
+                  <div className="empty-state heatmap-error">
+                    <strong>Heatmap unavailable</strong>
+                    <span>{result.heatmap_error}</span>
+                  </div>
                 ) : (
                   <div className="empty-state">Heatmap appears after prediction</div>
                 )}
