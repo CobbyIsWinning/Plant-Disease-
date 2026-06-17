@@ -335,12 +335,19 @@ input {
   border-top: 1px solid var(--line);
 }
 
+.result > *,
+.top-results {
+  min-width: 0;
+}
+
 .predicted {
   display: grid;
   gap: 8px;
   font-size: clamp(24px, 3vw, 38px);
   line-height: 1.05;
   font-weight: 850;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .predicted span {
