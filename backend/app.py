@@ -1,20 +1,17 @@
 import os
 import io
 import json
-import tempfile
-from typing import List
+import threading
 
-os.environ.setdefault("MPLCONFIGDIR", os.path.join(tempfile.gettempdir(), "matplotlib"))
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
+os.environ.setdefault("TF_NUM_INTRAOP_THREADS", "1")
+os.environ.setdefault("TF_NUM_INTEROP_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 import numpy as np
 from PIL import Image
-import tensorflow as tf
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from tensorflow.keras.models import load_model, Model
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-import matplotlib.cm as cm
-import matplotlib
 import base64
 
 # Configuration
@@ -52,6 +49,11 @@ app.add_middleware(
 _model = None
 _class_indices = None
 _preprocess_mode = "mobilenetv2"
+_model_path = ""
+_load_error = None
+_model_lock = threading.Lock()
+tf = None
+load_model = None
 
 
 def _find_model_path() -> str:
@@ -64,9 +66,9 @@ def _find_model_path() -> str:
 
 @app.on_event("startup")
 def load_resources():
-    global _model, _class_indices, _preprocess_mode
-    model_path = _find_model_path()
-    if not model_path:
+    global _class_indices, _model_path
+    _model_path = _find_model_path()
+    if not _model_path:
         abs_model_dir = os.path.abspath(MODEL_DIR)
         message = (
             f"No model found in: {abs_model_dir}. "
@@ -74,15 +76,10 @@ def load_resources():
             "(e.g., 'mobilenetv2_best.keras' or 'cnn_baseline.keras')."
         )
         print(message)
-        # keep server running but will return errors on predict
-        _model = None
+    elif os.getenv("EAGER_MODEL_LOAD", "").lower() in {"1", "true", "yes"}:
+        ensure_model_loaded()
     else:
-        print(f"Loading model from: {model_path}")
-        # load without compiling to keep startup faster
-        _model = load_model(model_path, compile=False)
-        _preprocess_mode = "baseline" if os.path.basename(model_path).startswith("cnn_baseline") else "mobilenetv2"
-        print(f"Preprocessing mode: {_preprocess_mode}")
-        print("Model loaded.")
+        print(f"Model found and will be loaded on first prediction: {_model_path}")
 
     if os.path.exists(CLASS_INDICES_PATH):
         with open(CLASS_INDICES_PATH, "r") as f:
@@ -101,6 +98,47 @@ def load_resources():
         _class_indices = None
 
 
+def _import_tensorflow():
+    global tf, load_model
+    if tf is not None:
+        return
+
+    import tensorflow as tensorflow
+    from tensorflow.keras.models import load_model as keras_load_model
+
+    tensorflow.config.threading.set_intra_op_parallelism_threads(int(os.getenv("TF_NUM_INTRAOP_THREADS", "1")))
+    tensorflow.config.threading.set_inter_op_parallelism_threads(int(os.getenv("TF_NUM_INTEROP_THREADS", "1")))
+    tf = tensorflow
+    load_model = keras_load_model
+
+
+def ensure_model_loaded():
+    global _model, _preprocess_mode, _model_path, _load_error
+    if _model is not None:
+        return _model
+
+    with _model_lock:
+        if _model is not None:
+            return _model
+        if not _model_path:
+            _model_path = _find_model_path()
+        if not _model_path:
+            raise RuntimeError(f"No model found in: {os.path.abspath(MODEL_DIR)}")
+
+        try:
+            print(f"Loading model from: {_model_path}")
+            _import_tensorflow()
+            _model = load_model(_model_path, compile=False)
+            _preprocess_mode = "baseline" if os.path.basename(_model_path).startswith("cnn_baseline") else "mobilenetv2"
+            _load_error = None
+            print(f"Preprocessing mode: {_preprocess_mode}")
+            print("Model loaded.")
+            return _model
+        except Exception as exc:
+            _load_error = str(exc)
+            raise
+
+
 def _validate_extension(filename: str) -> bool:
     _, ext = os.path.splitext(filename.lower())
     return ext in ALLOWED_EXT
@@ -113,7 +151,7 @@ def _preprocess_image(data: bytes) -> np.ndarray:
     if _preprocess_mode == "baseline":
         arr = arr / 255.0
     else:
-        arr = preprocess_input(arr)
+        arr = (arr / 127.5) - 1.0
     arr = np.expand_dims(arr, axis=0)
     return arr
 
@@ -190,13 +228,15 @@ def overlay_heatmap(img_data, heatmap, alpha=0.4, colormap_name="jet"):
     heatmap_img = heatmap_img.resize((IMG_SIZE, IMG_SIZE), Image.Resampling.BILINEAR)
     heatmap_resized = np.array(heatmap_img)
 
-    # Use a colormap to colorize the heatmap
-    colormap = matplotlib.colormaps.get_cmap(colormap_name) if hasattr(matplotlib, "colormaps") else cm.get_cmap(colormap_name)
-    
-    # Use the colormap to get RGB values
-    colored_heatmap = colormap(heatmap_resized)[:, :, :3]
-    
-    # Convert to uint8
+    heatmap_float = heatmap_resized.astype(np.float32) / 255.0
+    colored_heatmap = np.stack(
+        [
+            np.clip(1.5 - np.abs(4.0 * heatmap_float - 3.0), 0.0, 1.0),
+            np.clip(1.5 - np.abs(4.0 * heatmap_float - 2.0), 0.0, 1.0),
+            np.clip(1.5 - np.abs(4.0 * heatmap_float - 1.0), 0.0, 1.0),
+        ],
+        axis=-1,
+    )
     colored_heatmap = np.uint8(255 * colored_heatmap)
 
     # Superimpose the heatmap on original image
@@ -215,8 +255,10 @@ async def predict(file: UploadFile = File(...), top_k: int = 3, grad_cam: bool =
     """Predict the plant disease from an uploaded image.
     If grad_cam is True, returns a base64 encoded heatmap overlay.
     """
-    if _model is None:
-        raise HTTPException(status_code=500, detail="Model not loaded on server. Check backend/saved_models/.")
+    try:
+        model = ensure_model_loaded()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Model not loaded on server: {e}")
 
     if not _validate_extension(file.filename):
         raise HTTPException(status_code=400, detail="Unsupported file extension. Use jpg/jpeg/png.")
@@ -229,7 +271,7 @@ async def predict(file: UploadFile = File(...), top_k: int = 3, grad_cam: bool =
 
     # prediction
     try:
-        preds = _model.predict(inp)
+        preds = model.predict(inp, verbose=0)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {e}")
     if preds.ndim == 2:
@@ -293,13 +335,13 @@ async def predict(file: UploadFile = File(...), top_k: int = 3, grad_cam: bool =
             # Find the last convolutional layer. For MobileNetV2, it's usually 'Conv_1' or 'out_relu'
             # Note: We use the most common layer names or dynamically search for a Conv2D layer.
             last_conv_layer_name = None
-            for layer in reversed(_model.layers):
+            for layer in reversed(model.layers):
                 if isinstance(layer, tf.keras.layers.Conv2D):
                     last_conv_layer_name = layer.name
                     break
             
             if last_conv_layer_name:
-                heatmap = make_gradcam_heatmap(inp, _model, last_conv_layer_name, pred_index=top1["index"])
+                heatmap = make_gradcam_heatmap(inp, model, last_conv_layer_name, pred_index=top1["index"])
                 response["heatmap"] = overlay_heatmap(content, heatmap)
         except Exception as e:
             print(f"Grad-CAM error: {e}")
@@ -310,7 +352,13 @@ async def predict(file: UploadFile = File(...), top_k: int = 3, grad_cam: bool =
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "model_loaded": _model is not None, "class_indices_loaded": _class_indices is not None}
+    return {
+        "status": "ok",
+        "model_available": bool(_model_path or _find_model_path()),
+        "model_loaded": _model is not None,
+        "class_indices_loaded": _class_indices is not None,
+        "load_error": _load_error,
+    }
 
 
 if __name__ == "__main__":
