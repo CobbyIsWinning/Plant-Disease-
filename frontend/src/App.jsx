@@ -31,7 +31,7 @@ export default function App() {
     form.append('top_k', '3')
 
     try {
-      const res = await fetch(BACKEND_DEFAULT + '/predict?grad_cam=true', { method: 'POST', body: form })
+      const res = await fetch(BACKEND_DEFAULT + '/predict', { method: 'POST', body: form })
       if (!res.ok) {
         const txt = await res.text()
         throw new Error(txt || `HTTP ${res.status}`)
@@ -63,7 +63,7 @@ export default function App() {
           <h1>Identify leaf disease from a single image.</h1>
           <p className="hero-copy">
             Upload a crop leaf photo and the model returns the most likely disease class,
-            confidence score, top alternatives, and a Grad-CAM heatmap for visual context.
+            confidence score and top alternative classes for visual diagnosis support.
           </p>
           <a className="hero-action" href="#predictor">Start diagnosis</a>
         </div>
@@ -82,9 +82,8 @@ export default function App() {
               predicts across the available disease and healthy crop classes.
             </p>
             <p>
-              Results include the top matching classes and a heatmap that highlights image
-              regions contributing to the prediction. Use the output as decision support,
-              not as a replacement for expert field diagnosis.
+              Results include the top matching classes and confidence scores. Use the
+              output as decision support, not as a replacement for expert field diagnosis.
             </p>
           </div>
         </div>
@@ -121,7 +120,7 @@ export default function App() {
               </div>
 
               <div className="image-slot">
-                <h3>Explainability Heatmap</h3>
+                <h3>Model Output</h3>
                 {result && result.heatmap ? (
                   <img src={`data:image/jpeg;base64,${result.heatmap}`} alt="Grad-CAM heatmap" />
                 ) : result && result.heatmap_error ? (
@@ -130,7 +129,7 @@ export default function App() {
                     <span>{result.heatmap_error}</span>
                   </div>
                 ) : (
-                  <div className="empty-state">Heatmap appears after prediction</div>
+                  <div className="empty-state">Top predictions appear below after analysis</div>
                 )}
               </div>
             </div>
@@ -207,7 +206,7 @@ export default function App() {
             <a className="footer-brand" href="#top">LeafGuard</a>
             <p>
               A plant disease detection interface powered by a saved Keras model and
-              Grad-CAM visual explanations.
+              confidence-ranked disease suggestions.
             </p>
           </div>
           <div className="footer-links">

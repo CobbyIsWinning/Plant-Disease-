@@ -1,6 +1,6 @@
 # Frontend
 
-The frontend is a React/Vite landing page for the plant disease detection model. It presents the project, explains the model, lets users upload a leaf image, displays prediction results, shows a Grad-CAM heatmap, and renders diagnosis notes for the predicted class.
+The frontend is a React/Vite landing page for the plant disease detection model. It presents the project, explains the model, lets users upload a leaf image, displays prediction results, and renders diagnosis notes for the predicted class.
 
 ## Main Files
 
@@ -23,7 +23,7 @@ The UI is organized as:
 
 1. **Hero section** with autoplay background video.
 2. **Model overview section** explaining the classifier and heatmap.
-3. **Prediction section** with file upload, image preview, heatmap, and model output.
+3. **Prediction section** with file upload, image preview, and model output.
 4. **Diagnosis notes panel** with symptoms, causes, and suggested next steps.
 5. **Footer** with project links and backend endpoint information.
 
@@ -40,7 +40,7 @@ http://localhost:8000
 Prediction requests are sent to:
 
 ```text
-POST {VITE_API_URL}/predict?grad_cam=true
+POST {VITE_API_URL}/predict
 ```
 
 The request body is `FormData` containing:

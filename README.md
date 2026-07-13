@@ -1,12 +1,12 @@
 # Plant Disease Detection
 
-Plant Disease Detection is a full-stack machine learning project for classifying crop leaf images and showing diagnosis support to the user. The app combines a trained Keras image classifier, a FastAPI prediction service, and a React landing page where users can upload a leaf image, view the prediction, inspect a Grad-CAM heatmap, and read practical diagnosis notes.
+Plant Disease Detection is a full-stack machine learning project for classifying crop leaf images and showing diagnosis support to the user. The app combines a trained Keras image classifier, a FastAPI prediction service, and a React landing page where users can upload a leaf image, view confidence-ranked predictions, and read practical diagnosis notes.
 
 ## Project Goals
 
 - Detect plant leaf disease from an uploaded image.
 - Return the most likely class, confidence score, and top alternative predictions.
-- Show a Grad-CAM heatmap so users can see which parts of the image influenced the model.
+- Optionally support Grad-CAM heatmaps from the backend when deployment hardware has enough capacity.
 - Provide educational diagnosis details such as symptoms, common causes, and suggested next steps.
 - Present the model through a polished landing-page frontend suitable for a demo or portfolio.
 
@@ -15,7 +15,7 @@ Plant Disease Detection is a full-stack machine learning project for classifying
 - **Frontend:** React, Vite, CSS
 - **Backend:** FastAPI, TensorFlow/Keras, Pillow, NumPy
 - **Model:** Saved Keras CNN model in `backend/saved_models/cnn_baseline.keras`
-- **Explainability:** Grad-CAM heatmap generation in the backend
+- **Explainability:** Optional Grad-CAM heatmap generation in the backend
 - **Data:** Plant leaf image folders under `backend/dataset/raw`
 
 ## Repository Structure
@@ -45,14 +45,14 @@ Plant Disease Detection is a full-stack machine learning project for classifying
 
 1. The user opens the React landing page.
 2. The user uploads a JPG or PNG leaf image.
-3. The frontend sends the image to `POST /predict?grad_cam=true`.
+3. The frontend sends the image to `POST /predict`.
 4. The backend loads the saved Keras model and preprocesses the image.
 5. The model predicts the class probabilities.
 6. The backend returns:
    - predicted class
    - displayed confidence rating normalized across the returned valid top predictions
    - top predictions with both normalized display confidence and raw model confidence
-   - optional Grad-CAM heatmap as base64 JPEG
+   - optional Grad-CAM heatmap as base64 JPEG when `grad_cam=true`
 7. The backend filters out the temporary `PlantVillage` dataset-folder label and returns the best real crop/disease prediction.
 8. The frontend maps the predicted class to diagnosis notes stored locally in `frontend/src/diagnosisInfo.js`.
 
@@ -120,7 +120,7 @@ Query parameters:
 Example:
 
 ```bash
-curl -F "file=@/path/to/leaf.jpg" "http://127.0.0.1:8000/predict?top_k=5&grad_cam=true"
+curl -F "file=@/path/to/leaf.jpg" "http://127.0.0.1:8000/predict?top_k=5"
 ```
 
 Example response shape:
@@ -136,7 +136,7 @@ Example response shape:
   ],
   "confidence_basis": "normalized_top_k_valid_classes",
   "class_indices_loaded": true,
-  "heatmap": "base64-jpeg-data"
+  "heatmap": "base64-jpeg-data when grad_cam=true"
 }
 ```
 
@@ -178,7 +178,7 @@ This keeps the explanation predictable and avoids generating unsupported advice.
 - `PlantVillage` currently exists as a folder inside `backend/dataset/raw`, so the model may score it as a class. The backend filters it out of API responses, but the dataset should be cleaned so `PlantVillage` is not a class label.
 - The baseline model evaluation in `backend/results/classification_report.txt` shows low overall accuracy. Treat predictions as a demo result, not a production diagnosis.
 - The app uses image-only classification. It does not consider weather, location, plant age, crop management, or field spread.
-- The Grad-CAM heatmap explains model attention, not guaranteed biological evidence.
+- Grad-CAM is disabled in the production frontend because it is expensive on free/low-capacity hosting. If enabled, it explains model attention, not guaranteed biological evidence.
 - The landing video is large and should be compressed before deployment.
 
 ## Recommended Improvements
