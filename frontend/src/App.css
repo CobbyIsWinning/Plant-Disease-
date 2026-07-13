@@ -264,6 +264,20 @@ input {
   cursor: wait;
 }
 
+.heatmap-button {
+  justify-self: start;
+  margin-top: 14px;
+  border: 1px solid var(--leaf);
+  background: #f8fbf7;
+  color: var(--leaf-dark);
+}
+
+.heatmap-button:disabled {
+  border-color: #9eb3a8;
+  color: #6f8378;
+  cursor: wait;
+}
+
 .images-container {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

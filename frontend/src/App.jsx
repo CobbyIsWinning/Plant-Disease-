@@ -10,6 +10,7 @@ export default function App() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [heatmapLoading, setHeatmapLoading] = useState(false)
 
   const onFileChange = (e) => {
     const f = e.target.files[0]
@@ -18,30 +19,51 @@ export default function App() {
     setPreview(URL.createObjectURL(f))
     setResult(null)
     setError(null)
+    setHeatmapLoading(false)
   }
 
-  const onPredict = async () => {
+  const requestPrediction = async (includeHeatmap = false) => {
     if (!file) return setError('Choose an image first')
-    setLoading(true)
     setError(null)
-    setResult(null)
 
     const form = new FormData()
     form.append('file', file)
     form.append('top_k', '3')
 
+    const path = includeHeatmap ? '/predict?grad_cam=true' : '/predict'
+    const res = await fetch(BACKEND_DEFAULT + path, { method: 'POST', body: form })
+    if (!res.ok) {
+      const txt = await res.text()
+      throw new Error(txt || `HTTP ${res.status}`)
+    }
+    return res.json()
+  }
+
+  const onPredict = async () => {
+    setLoading(true)
+    setResult(null)
+
     try {
-      const res = await fetch(BACKEND_DEFAULT + '/predict', { method: 'POST', body: form })
-      if (!res.ok) {
-        const txt = await res.text()
-        throw new Error(txt || `HTTP ${res.status}`)
-      }
-      const data = await res.json()
+      const data = await requestPrediction(false)
       setResult(data)
     } catch (err) {
       setError(String(err))
     } finally {
       setLoading(false)
+    }
+  }
+
+  const onGenerateHeatmap = async () => {
+    setHeatmapLoading(true)
+    setError(null)
+
+    try {
+      const data = await requestPrediction(true)
+      setResult(data)
+    } catch (err) {
+      setError(String(err))
+    } finally {
+      setHeatmapLoading(false)
     }
   }
 
@@ -120,7 +142,7 @@ export default function App() {
               </div>
 
               <div className="image-slot">
-                <h3>Model Output</h3>
+                <h3>Explainability Heatmap</h3>
                 {result && result.heatmap ? (
                   <img src={`data:image/jpeg;base64,${result.heatmap}`} alt="Grad-CAM heatmap" />
                 ) : result && result.heatmap_error ? (
@@ -129,12 +151,13 @@ export default function App() {
                     <span>{result.heatmap_error}</span>
                   </div>
                 ) : (
-                  <div className="empty-state">Top predictions appear below after analysis</div>
+                  <div className="empty-state">Generate a heatmap after prediction</div>
                 )}
               </div>
             </div>
 
             {loading && <p className="status">Processing request...</p>}
+            {heatmapLoading && <p className="status">Generating heatmap...</p>}
 
             {result && (
               <>
@@ -159,6 +182,13 @@ export default function App() {
                         </li>
                       ))}
                     </ul>
+                    <button
+                      className="heatmap-button"
+                      onClick={onGenerateHeatmap}
+                      disabled={heatmapLoading || loading}
+                    >
+                      {heatmapLoading ? 'Generating...' : result.heatmap ? 'Regenerate heatmap' : 'Generate heatmap'}
+                    </button>
                   </div>
                 </div>
 
