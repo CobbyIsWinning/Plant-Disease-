@@ -1,3 +1,12 @@
+---
+title: Plant Disease Detection
+emoji: 🌿
+colorFrom: green
+colorTo: gray
+sdk: docker
+app_port: 8000
+---
+
 # Backend
 
 The backend is a FastAPI service that loads a saved Keras model and exposes prediction endpoints for the React frontend. It handles image validation, preprocessing, model inference, top-k formatting, and optional Grad-CAM heatmap generation.
