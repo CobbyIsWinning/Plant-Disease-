@@ -267,15 +267,47 @@ input {
 .heatmap-button {
   justify-self: start;
   margin-top: 14px;
-  border: 1px solid var(--leaf);
-  background: #f8fbf7;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid rgba(47, 125, 82, 0.42);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(237, 247, 240, 0.96) 100%);
   color: var(--leaf-dark);
+  font-weight: 800;
+  box-shadow: 0 8px 20px rgba(23, 72, 47, 0.12);
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.heatmap-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--leaf);
+  background:
+    linear-gradient(180deg, #ffffff 0%, #e7f4eb 100%);
+  box-shadow: 0 12px 26px rgba(23, 72, 47, 0.16);
+}
+
+.heatmap-button:focus-visible {
+  outline: 3px solid rgba(209, 150, 45, 0.34);
+  outline-offset: 3px;
+}
+
+.heatmap-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 5px 14px rgba(23, 72, 47, 0.14);
 }
 
 .heatmap-button:disabled {
   border-color: #9eb3a8;
+  background: #eef3ed;
   color: #6f8378;
   cursor: wait;
+  box-shadow: none;
 }
 
 .images-container {
